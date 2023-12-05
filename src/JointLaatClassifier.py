@@ -15,15 +15,7 @@ from dataset_builder_utils import *
 
 ckpt_path = '/project/src/Attention Project/checkpoints/model_flat-v'
 
-# dataset_name = 'WOS'
-# dataset_name = 'NYT'
-# dataset_name = 'RCV1'
-
-# dataset_names = ['NYT', 'RCV1']
-# Remember don't have to do False and True for WOS dataset!
-# dataset_names = ['WOS']
 dataset_names = ['WOS', 'NYT', 'RCV1']
-# dataset_names = ['HCRD', 'CREST', 'MESO']
 
 # test = True
 test = False
@@ -98,8 +90,7 @@ else:
                 num_epochs = 12
                 num_epochs_for_decaying = 10
             
-            # learning_rates = [3e-4, 2e-4, 1e-4, 7.5e-5]
-            learning_rates = [2e-4, 1e-4]
+            learning_rates = [3e-4, 2e-4, 1e-4, 7.5e-5]
             layer_wise_decay_ratio = 0.8
         batch_sizes = [16]
         random_seeds = [44]
@@ -136,23 +127,10 @@ dropout_probs = [0.0]
 
 if test:
     model_name = 'prajjwal1/bert-tiny'
-    # model_name = 'roberta-base'
-    # model_name = 'google/electra-base-discriminator'
 
 else:
-    # model_name = 'prajjwal1/bert-small'
     # model_name = 'bert-base-uncased'
     model_name = 'roberta-base'
-    # model_name = 'microsoft/deberta-v3-base'
-    # model_name = 'google/electra-small-discriminator'
-    # model_name = 'google/electra-base-discriminator'
-    # model_name = 'allenai/scibert_scivocab_uncased'
-    # model_name = 'distilbert-base-uncased'
-    # model_name = 'albert-base-v2'
-    # model_name = 'microsoft/deberta-v3-base'
-
-if model_name == 'roberta-base':
-    concat_all_previous_levels_list = [True]
 
 def main():
     # global laat_projection_dim
@@ -220,19 +198,16 @@ def main():
                                         batch_size = 32
                                         learning_rate = 2e-4
                                         laat_projection_dim = 512
-                                        checkpoint_paths = [ckpt_path + str(166) + '.ckpt', ckpt_path + str(167) + '.ckpt', ckpt_path + str(168) + '.ckpt']
                                 elif dataset_name == 'NYT':
                                     if concat_all_previous_levels:
                                         batch_size = 16
                                         learning_rate = 2e-4
                                         laat_projection_dim = 512
-                                        checkpoint_paths = [ckpt_path + str(169) + '.ckpt', ckpt_path + str(170) + '.ckpt', ckpt_path + str(171) + '.ckpt']
                                 elif dataset_name == 'RCV1':
                                     if concat_all_previous_levels:
                                         batch_size = 16
                                         learning_rate = 1e-4
                                         laat_projection_dim = 512
-                                        checkpoint_paths = [ckpt_path + str(172) + '.ckpt', ckpt_path + str(173) + '.ckpt', ckpt_path + str(174) + '.ckpt']
                             else:
                                 # Final runs
                                 if dataset_name == 'WOS':
@@ -240,68 +215,29 @@ def main():
                                         batch_size = 16
                                         learning_rate = 1e-4
                                         laat_projection_dim = 512
-                                        checkpoint_paths = [ckpt_path + str(159) + '.ckpt', ckpt_path + str(160) + '.ckpt', ckpt_path + str(161) + '.ckpt']
                                     else:
                                         batch_size = 16
                                         learning_rate = 1e-4
                                         laat_projection_dim = 512
-                                        checkpoint_paths = [ckpt_path + str(159) + '.ckpt', ckpt_path + str(160) + '.ckpt', ckpt_path + str(161) + '.ckpt']
                                 elif dataset_name == 'NYT':
                                     if concat_all_previous_levels:
                                         batch_size = 16
                                         learning_rate = 2e-4
                                         laat_projection_dim = 512
-                                        checkpoint_paths = [ckpt_path + str(149) + '.ckpt', ckpt_path + str(150) + '.ckpt', ckpt_path + str(151) + '.ckpt']
                                     else:
                                         batch_size = 16
                                         learning_rate = 1e-4
                                         laat_projection_dim = 256
-                                        checkpoint_paths = [ckpt_path + str(144) + '.ckpt', ckpt_path + str(146) + '.ckpt', ckpt_path + str(147) + '.ckpt']
                                 elif dataset_name == 'RCV1':
                                     if concat_all_previous_levels:
                                         batch_size = 16
                                         learning_rate = 7.5e-5
                                         laat_projection_dim = 256
-                                        checkpoint_paths = [ckpt_path + str(155) + '.ckpt', ckpt_path + str(156) + '.ckpt', ckpt_path + str(157) + '.ckpt']
                                     else:
                                         batch_size = 16
                                         learning_rate = 2e-4
                                         laat_projection_dim = 256
-                                        checkpoint_paths = [ckpt_path + str(152) + '.ckpt', ckpt_path + str(153) + '.ckpt', ckpt_path + str(154) + '.ckpt']
-                        if load_model_from_file:
-                            checkpoint_path = checkpoint_paths[index]
-                            load_and_test_model(checkpoint_path, dataset_name, val_dataset, test_dataset, num_labels, level_num_labels, depth2label, random_seed, batch_size, learning_rate)
-                        else:
-                            train(dataset_name, level_num_labels, depth2label, train_dataset, val_dataset, test_dataset, num_labels, random_seed, batch_size, learning_rate, 0)
-
-def load_and_test_model(checkpoint_path, dataset_name, val_dataset, test_dataset, num_labels, level_num_labels, depth2label, random_seed, batch_size, learning_rate):
-    checkpoint_weights = torch.load(checkpoint_path)['state_dict']
-    keys = list(checkpoint_weights.keys())
-    for key in keys:
-        checkpoint_weights[key[6:]] = checkpoint_weights.pop(key)
-    classifier = JointLaatModel(num_labels, level_num_labels, depth2label, model_name, concat_last_4_hidden_states, laat_projection_dim, 
-                                    level_projection_size, concat_all_previous_levels, use_previous_level_output_scores)
-    
-    classifier.load_state_dict(checkpoint_weights)
-
-    val_loader = DataLoader(val_dataset, batch_size = test_batch_size)
-    test_loader = DataLoader(test_dataset, batch_size = test_batch_size)
-
-    wandb_logger = WandbLogger(project = "Research Classification", name = "Flat")
-    wandb_logger.experiment.config.update({'dataset': dataset_name, 'classifier': 'hier_local', 'bert_model': model_name, 'batch_size': batch_size, 'learning_rate': learning_rate,
-                                                'random_seed': random_seed, 'earlystop_patience': earlystop_patience, 
-                                                'concat_last_4_hidden_states': concat_last_4_hidden_states, 'cnn_model_type': cnn_model_type, 
-                                                'laat_projection_dim': laat_projection_dim, 'level_projection_size': level_projection_size, 'use_lr_scheduler': use_lr_scheduler,
-                                                'concat_all_previous_levels': concat_all_previous_levels, 'use_previous_level_output_scores': use_previous_level_output_scores, 
-                                                'linear_lr_decay': linear_lr_decay, 'layer_wise_lr_decay': layer_wise_lr_decay, 'layer_wise_decay_ratio': layer_wise_decay_ratio,
-                                               'linear_warmup': linear_warmup, 'linear_warmup_steps_percentage': linear_warmup_steps_percentage, 'lr_decay_min_ratio': lr_decay_min_ratio, 
-                                               'stopping_criteria': stopping_criteria})
-
-    lightning_model = LightningModel(model=classifier, learning_rate=learning_rate, num_labels=num_labels, depth2label = depth2label, bert_lr = 0, attention_lr = 0)
-    trainer = pl.Trainer(precision="16-mixed", max_epochs=num_epochs, deterministic=True, accelerator=accelerator, logger = wandb_logger)
-    trainer.validate(model = lightning_model, dataloaders = val_loader)
-    trainer.test(model = lightning_model, dataloaders = test_loader)
-    wandb.finish()
+                        train(dataset_name, level_num_labels, depth2label, train_dataset, val_dataset, test_dataset, num_labels, random_seed, batch_size, learning_rate, 0)
 
 def train(dataset_name, level_num_labels, depth2label, train_dataset, val_dataset, test_dataset, num_labels, random_seed, train_batch_size, learning_rate, dropout_prob, bert_lr = 0, attention_lr = 0):
     # Build datasets.

@@ -10,37 +10,15 @@ class FlatBERTAttModel(nn.Module):
         self.model_name = model_name
         self.model_type = self.bert.config.model_type
         hidden_size = self.bert.config.hidden_size
-        self.concat_last_4_hidden_states = concat_last_4_hidden_states
 
-        if concat_last_4_hidden_states:
-            self.Q = nn.Linear(hidden_size * 4, num_labels, bias=False)
-            self.W = nn.Linear(hidden_size * 4, num_labels)
-        else:
-            self.Q = nn.Linear(hidden_size, num_labels, bias=False)
-            self.W = nn.Linear(hidden_size, num_labels)
+        self.Q = nn.Linear(hidden_size, num_labels, bias=False)
+        self.W = nn.Linear(hidden_size, num_labels)
 
     def forward(self, input_ids, attention_mask):
-        if self.concat_last_4_hidden_states:
-            if self.model_type == 'bert' or self.model_type == 'roberta':
-                last_hidden_states, CLS, all_hidden_states = self.bert(input_ids=input_ids, attention_mask=attention_mask, 
-                                                                       output_hidden_states=True, return_dict=False)
-            else:
-                # TODO not sure if this works
-                hidden_states, all_hidden_states = self.bert(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict=False)
-            hidden_states = []
-            num_layers = len(all_hidden_states)
-            if num_layers - 4 <= 0:
-                start = 1
-            else:
-                start = num_layers - 4
-            for i in range(start, num_layers):
-                hidden_states.append(all_hidden_states[i])
-            hidden_states = torch.cat(hidden_states, dim = 2)
+        if self.model_type == 'bert' or self.model_type == 'roberta':
+            hidden_states, CLS = self.bert(input_ids, attention_mask, return_dict = False)
         else:
-            if self.model_type == 'bert' or self.model_type == 'roberta':
-                hidden_states, CLS = self.bert(input_ids, attention_mask, return_dict = False)
-            else:
-                hidden_states = self.bert(input_ids, attention_mask, return_dict = False)[0]
+            hidden_states = self.bert(input_ids, attention_mask, return_dict = False)[0]
         
         weights = self.Q(hidden_states)
         att_weights = F.softmax(weights, 1).transpose(1, 2)
@@ -70,27 +48,10 @@ class FlatBERTLaatModel(nn.Module):
             self.final_linear = nn.Linear(hidden_size, num_labels)
 
     def forward(self, input_ids, attention_mask):
-        if self.concat_last_4_hidden_states:
-            if self.model_type == 'bert' or self.model_type == 'roberta':
-                last_hidden_states, CLS, all_hidden_states = self.bert(input_ids=input_ids, attention_mask=attention_mask, 
-                                                                       output_hidden_states=True, return_dict=False)
-            else:
-                hidden_states, all_hidden_states = self.bert(input_ids=input_ids, attention_mask=attention_mask, 
-                                                             output_hidden_states=True, return_dict=False)
-            hidden_states = []
-            num_layers = len(all_hidden_states)
-            if num_layers - 4 <= 0:
-                start = 1
-            else:
-                start = num_layers - 4
-            for i in range(start, num_layers):
-                hidden_states.append(all_hidden_states[i])
-            hidden_states = torch.cat(hidden_states, dim = 2)
+        if self.model_type == 'bert' or self.model_type == 'roberta':
+            hidden_states, CLS = self.bert(input_ids, attention_mask, return_dict = False)
         else:
-            if self.model_type == 'bert' or self.model_type == 'roberta':
-                hidden_states, CLS = self.bert(input_ids, attention_mask, return_dict = False)
-            else:
-                hidden_states = self.bert(input_ids, attention_mask, return_dict = False)[0]
+            hidden_states = self.bert(input_ids, attention_mask, return_dict = False)[0]
 
         weights = F.tanh(self.W(hidden_states))
 
@@ -205,32 +166,3 @@ class JointLaatAttention(nn.Module):
         weighted_output = self.final_linear[level].weight.mul(weighted_output).sum(dim=2).add(
                 self.final_linear[level].bias)
         return weighted_output
-    
-class HierAttBertClassifier(nn.Module):
-    def __init__(self, hier_dict, num_labels, model_type, model_name, laat_projection_dim, dropout_prob):
-        super(HierAttBertClassifier, self).__init__()
-        self.hier_dict = hier_dict
-        self.num_labels = num_labels
-        
-        if model_type == 'FlatBERTLaatModel':
-            self.model_list = nn.ModuleList([FlatBERTLaatModel(len(hier_dict), model_name, laat_projection_dim)])
-            # Level 1 classifiers
-            self.model_list.extend([FlatBERTLaatModel(len(hier_dict[i]), model_name) for i in range(len(hier_dict))])
-        elif model_type == 'FlatBERTAttModel':
-            self.model_list = nn.ModuleList([FlatBERTAttModel(len(hier_dict), model_name)])
-            # Level 1 classifiers
-            self.model_list.extend([FlatBERTAttModel(len(hier_dict[i]), model_name) for i in range(len(hier_dict))])
-    
-    def forward(self, input_ids, attention_mask):
-        # Pass embeddings to CNN
-        output = torch.zeros(input_ids.shape[0], self.num_labels)
-        root_classifier_outputs = self.model_list[0](input_ids, attention_mask)
-        level_1_predictions = torch.argmax(root_classifier_outputs, dim = 1).tolist()
-        
-        for i in range(output.shape[0]):
-            level_1_classifier_output = self.model_list[1 + level_1_predictions[i]](torch.unsqueeze(input_ids[i], attention_mask[i], dim = 0))
-            level_2_prediction = torch.argmax(level_1_classifier_output)
-            level_2_prediction_global = self.hier_dict[level_1_predictions[i]][level_2_prediction]
-            output[i][level_1_predictions[i]] = 1
-            output[i][level_2_prediction_global] = 1
-        return output

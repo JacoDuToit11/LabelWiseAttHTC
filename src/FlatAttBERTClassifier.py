@@ -14,16 +14,7 @@ from pytorch_lightning.loggers import WandbLogger
 from AttBERTmodels import *
 from dataset_builder_utils import *
 
-# dataset_names = ['WOS', 'NYT', 'RCV1']
-# dataset_names = ['HCRD']
-# dataset_names = ['WOS', 'NYT', 'RCV1']
-# dataset_names = ['NYT']
-# dataset_names = ['WOS', 'NYT']
-dataset_names = ['RCV1']
-
-ckpt_path = '/project/src/Attention Project/checkpoints/model_flat-v'
-# ckpt_path = '/project/src/Attention Project/checkpoints/'
-# ckpt_path = '/home/jacodutoit/Desktop/Masters/MastersRepo/src/Attention Project/checkpoints'
+dataset_names = ['WOS', 'NYT', 'RCV1']
 
 # test = True
 test = False
@@ -91,8 +82,7 @@ else:
                 num_epochs = 12
                 num_epochs_for_decaying = 10
             
-            # learning_rates = [3e-4, 2e-4, 1e-4, 7.5e-5]
-            learning_rates = [2e-4, 1e-4]
+            learning_rates = [3e-4, 2e-4, 1e-4, 7.5e-5]
             layer_wise_decay_ratio = 0.8
         batch_sizes = [16]
         random_seeds = [44]
@@ -100,9 +90,7 @@ else:
         # Final runs!
         if use_lr_scheduler:
             num_epochs = 10
-            # random_seeds = [33, 44, 55]
-            # random_seeds = [33, 44]
-            random_seeds = [55]
+            random_seeds = [33, 44, 55]
         if layer_wise_lr_decay:
             if low_resource:
                 num_epochs = 22
@@ -111,7 +99,6 @@ else:
                 num_epochs = 12
                 num_epochs_for_decaying = 10
             layer_wise_decay_ratio = 0.8
-            # random_seeds = [33, 44, 55]
             random_seeds = [44]
 
 
@@ -119,8 +106,6 @@ else:
     num_dev_samples = 'all'
     num_test_samples = 'all'
 
-# cnn_model_types = ['FlatBERTLaatModel']
-# cnn_model_types = ['FlatBERTAttModel']
 cnn_model_types = ['FlatBERTAttModel', 'FlatBERTLaatModel']
 
 linear_warmup_ratio = 0.25
@@ -133,59 +118,11 @@ if test:
     model_name = 'prajjwal1/bert-tiny'
     # model_name = 'prajjwal1/bert-medium'
 else:
-    # model_name = 'prajjwal1/bert-tiny'
-    # model_name = 'prajjwal1/bert-medium'
     model_name = 'bert-base-uncased'
     # model_name = 'roberta-base'
-    # model_name = 'microsoft/deberta-v3-base'
-    # model_name = 'google/electra-small-discriminator'
-    # model_name = 'google/electra-base-discriminator'
-    # model_name = 'allenai/scibert_scivocab_uncased'
-    # model_name = 'distilbert-base-uncased'
-    # model_name = 'albert-base-v2'
-    # model_name = 'microsoft/deberta-v3-base'
 
 # concat_last_4_hidden_states = True
 concat_last_4_hidden_states = False
-
-def print_loaded_models():
-    for temp_ckpt_path in sorted(os.listdir(ckpt_path)):
-        full_temp_ckpt_path = os.path.join(ckpt_path, temp_ckpt_path)
-        checkpoint = torch.load(full_temp_ckpt_path)
-        checkpoint_weights = checkpoint['state_dict']
-        keys = list(checkpoint_weights.keys())
-        if 'model.final_linear.bias' in keys[-1]:
-            model_type = 'FlatBERTLaatModel'
-            num_labels = checkpoint_weights['model.U.weight'].shape[0]
-            if num_labels == 166:
-                dataset = 'NYT'
-            elif num_labels == 103:
-                dataset = 'RCV1'
-            elif num_labels == 141:
-                dataset = 'WOS'
-
-        elif 'model.W.bias' in keys[-1]:
-            model_type = 'FlatBERTAttModel'
-            num_labels = checkpoint_weights['model.W.weight'].shape[0]
-            if num_labels == 166:
-                dataset = 'NYT'
-            elif num_labels == 103:
-                dataset = 'RCV1'
-            elif num_labels == 141:
-                dataset = 'WOS'
-        else:
-            model_type = 'JointLaatModel'
-            if 'model.projection_linears.7.weight' in keys:
-                dataset = 'NYT'
-            elif 'model.projection_linears.3.weight' in keys:
-                dataset = 'RCV1'
-            else:
-                dataset = 'WOS'
-        
-        print('---')
-        print(temp_ckpt_path)
-        print(model_type)
-        print(dataset)
 
 def main():
     # global laat_projection_dim
@@ -239,69 +176,29 @@ def main():
                                 batch_size = 16
                                 learning_rate = 7.5e-5
                                 laat_projection_dim = 0
-                                # random seeds 33,44, and 22 respectively.
-                                checkpoint_paths = [ckpt_path + str(136) + '.ckpt', ckpt_path + str(85) + '.ckpt', ckpt_path + str(162) + '.ckpt']
                             elif cnn_model_type == 'FlatBERTLaatModel':
                                 batch_size = 32
                                 learning_rate = 2e-4
                                 laat_projection_dim = 512
-                                checkpoint_paths = [ckpt_path + str(158) + '.ckpt', ckpt_path + str(70) + '.ckpt', ckpt_path + str(175) + '.ckpt']
                         elif dataset_name == 'NYT':
                             if cnn_model_type == 'FlatBERTAttModel':
                                 batch_size = 16
                                 learning_rate = 2e-4
                                 laat_projection_dim = 0
-                                checkpoint_paths = [ckpt_path + str(138) + '.ckpt', ckpt_path + str(91) + '.ckpt', ckpt_path + str(139) + '.ckpt']
                             elif cnn_model_type == 'FlatBERTLaatModel':
                                 batch_size = 16
                                 learning_rate = 1e-4
                                 laat_projection_dim = 512
-                                checkpoint_paths = [ckpt_path + str(176) + '.ckpt', ckpt_path + str(77) + '.ckpt', ckpt_path + str(177) + '.ckpt']
                         elif dataset_name == 'RCV1':
                             if cnn_model_type == 'FlatBERTAttModel':
                                 batch_size = 16
                                 learning_rate = 7.5e-5
                                 laat_projection_dim = 0
-                                checkpoint_paths = [ckpt_path + str(140) + '.ckpt', ckpt_path + str(141) + '.ckpt', ckpt_path + str(142) + '.ckpt']
                             elif cnn_model_type == 'FlatBERTLaatModel':
                                 batch_size = 16
                                 learning_rate = 2e-4
                                 laat_projection_dim = 512
-                                checkpoint_paths = [ckpt_path + str(143) + '.ckpt', ckpt_path + str(145) + '.ckpt', ckpt_path + str(148) + '.ckpt']
-                    if load_model_from_file:
-                        checkpoint_path = checkpoint_paths[index]
-                        load_and_test_model(checkpoint_path, dataset_name, val_dataset, test_dataset, num_labels, depth2label, random_seed, batch_size, learning_rate)
-                    else:
-                        train(dataset_name, train_dataset, val_dataset, test_dataset, num_labels, depth2label, random_seed, batch_size, learning_rate, 0)
-
-def load_and_test_model(checkpoint_path, dataset_name, val_dataset, test_dataset, num_labels, depth2label, random_seed, batch_size, learning_rate):
-    checkpoint_weights = torch.load(checkpoint_path)['state_dict']
-    keys = list(checkpoint_weights.keys())
-    for key in keys:
-        checkpoint_weights[key[6:]] = checkpoint_weights.pop(key)
-    if cnn_model_type == 'FlatBERTLaatModel':
-        classifier = FlatBERTLaatModel(num_labels, model_name, concat_last_4_hidden_states, laat_projection_dim, 0)
-    elif cnn_model_type == 'FlatBERTAttModel':
-        classifier = FlatBERTAttModel(num_labels, model_name, concat_last_4_hidden_states, 0)
-    
-    classifier.load_state_dict(checkpoint_weights)
-
-    val_loader = DataLoader(val_dataset, batch_size = test_batch_size)
-    test_loader = DataLoader(test_dataset, batch_size = test_batch_size)
-
-    wandb_logger = WandbLogger(project = "Research Classification", name = "Flat")
-    wandb_logger.experiment.config.update({'dataset': dataset_name, 'classifier': 'hier_local', 'bert_model': model_name, 'batch_size': batch_size, 'learning_rate': learning_rate,
-                                            'random_seed': random_seed, 'earlystop_patience': earlystop_patience, 
-                                           'cnn_model_type': cnn_model_type, 'laat_projection_dim': laat_projection_dim, 
-                                            'linear_lr_decay': linear_lr_decay, 'layer_wise_lr_decay': layer_wise_lr_decay, 'layer_wise_decay_ratio': layer_wise_decay_ratio,
-                                            'linear_warmup': linear_warmup, 'linear_warmup_steps_percentage': linear_warmup_steps_percentage, 'lr_decay_min_ratio': lr_decay_min_ratio, 
-                                            'stopping_criteria': stopping_criteria, 'low_resource': low_resource})
-
-    lightning_model = LightningModel(model=classifier, learning_rate=learning_rate, num_labels=num_labels, depth2label = depth2label, bert_lr = 0, attention_lr = 0)
-    trainer = pl.Trainer(precision="16-mixed", max_epochs=num_epochs, deterministic=True, accelerator=accelerator, logger = wandb_logger)
-    trainer.validate(model = lightning_model, dataloaders = val_loader)
-    trainer.test(model = lightning_model, dataloaders = test_loader)
-    wandb.finish()
+                    train(dataset_name, train_dataset, val_dataset, test_dataset, num_labels, depth2label, random_seed, batch_size, learning_rate, 0)
 
 def train(dataset_name, train_dataset, val_dataset, test_dataset, num_labels, depth2label, random_seed, train_batch_size, learning_rate, dropout_prob, bert_lr = 0, attention_lr = 0):
     # Build datasets.
